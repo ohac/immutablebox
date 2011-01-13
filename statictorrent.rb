@@ -15,9 +15,11 @@ class Torrent
     def initialize(info)
       @info = info
       @info_hash = Digest::SHA1.digest(BEncode.dump(info))
-      @files = info['files']
       @piece_length = info['piece length']
       @name = info['name']
+      @files = info['files'] || [{
+        'length' => info['length'], 'path' => [@name]
+      }]
       pieces = info['pieces']
       @pieces = (pieces.size / 20).times.map{|i| pieces[i * 20, 20]}
     end
@@ -59,17 +61,15 @@ class Torrent
 end
 
 def load_torrent(tname)
-  downloaddir = "#{ENV['HOME']}/Downloads"
   torrent = Torrent.new(tname)
   info = torrent.info
-  name = "#{downloaddir}/#{info.name}"
   pieces = info.pieces.clone
   piece_length = info.piece_length
 
   piece = nil
   info.files.each do |file|
     file_size = file['length']
-    filename = "#{name}/#{file['path'][0]}"
+    filename = file['path'][0]
     File.open(filename, 'rb') do |fd|
       loop do
         if piece.nil?
@@ -93,6 +93,39 @@ def load_torrent(tname)
       yield(piece_hash, piece)
     end
   end
+end
+
+def make_torrent(path, tracker, priv)
+  torrent_piece_size = 2 ** 18
+  torrent_pieces = []
+  piece = ''
+  File.open(path, 'rb') do |fd|
+    loop do
+      data = fd.read(torrent_piece_size - piece.size)
+      break if data.nil?
+      piece << data
+      if piece.size == torrent_piece_size
+        torrent_pieces << Digest::SHA1.digest(piece)
+        piece = ''
+      end
+    end
+  end
+  if piece.size > 0
+    torrent_pieces << Digest::SHA1.digest(piece)
+  end
+  torrent = {
+    'announce' => tracker,
+    'created by' => 'statictorrent 0.0.0',
+    'creation date' => Time.now.to_i,
+    'info' => {
+      'length' => torrent_piece_size * (torrent_pieces.size - 1) + piece.size,
+      'name' => path,
+      'private' => priv ? 1 : 0,
+      'pieces' => torrent_pieces.join,
+      'piece length' => torrent_piece_size,
+    }
+  }
+  BEncode.dump(torrent)
 end
 
 class Storage
@@ -136,19 +169,20 @@ class DistributedStorage < Storage
   end
 end
 
+tracker = 'http://localhost:6969/announce'
+priv = true
+img = make_torrent('statictorrent.rb', tracker, priv)
+File.open('a.torrent', 'wb') do |fd|
+  fd.write(img)
+end
+
 distributed_storage = DistributedStorage.new
 distributed_storage << LocalStorage.new('dropbox')
 distributed_storage << LocalStorage.new('ubuntuone')
-distributed_storage << LocalStorage.new('spideroak')
-distributed_storage << LocalStorage.new('gmailfs')
-distributed_storage << LocalStorage.new('usbmemory')
-distributed_storage << LocalStorage.new('sdcard')
-distributed_storage << LocalStorage.new('hgdrop')
-distributed_storage << LocalStorage.new('rubydrop')
 
 begin
   distributed_storage.open
-  load_torrent('Fedora-13-i686-Live.torrent') do |piece_hash, piece|
+  load_torrent('a.torrent') do |piece_hash, piece|
     distributed_storage.store(piece_hash, piece)
   end
 ensure
