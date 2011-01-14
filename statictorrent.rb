@@ -69,7 +69,7 @@ def load_torrent(tname)
   piece = nil
   info.files.each do |file|
     file_size = file['length']
-    filename = file['path'][0]
+    filename = file['path'].join('/')
     File.open(filename, 'rb') do |fd|
       loop do
         if piece.nil?
@@ -95,34 +95,79 @@ def load_torrent(tname)
   end
 end
 
-def make_torrent(path, tracker, priv)
+def walk(path, &block)
+  Dir.entries(path).select{|d| !(/\A\.+\z/.match d)}.each do |e|
+    file = File.join(path, e)
+    if File.directory?(file)
+      walk(file, &block)
+    else
+      yield file
+    end
+  end
+end
+
+def split_path(path)
+  d = path
+  rv = []
+  loop do
+    d, f = File.split(d)
+    rv.insert(0, f)
+    break if d == '.'
+  end
+  rv
+end
+
+def make_torrent(name, path, tracker, priv)
   torrent_piece_size = 2 ** 18
   torrent_pieces = []
   piece = ''
-  File.open(path, 'rb') do |fd|
-    loop do
-      data = fd.read(torrent_piece_size - piece.size)
-      break if data.nil?
-      piece << data
-      if piece.size == torrent_piece_size
-        torrent_pieces << Digest::SHA1.digest(piece)
-        piece = ''
+
+  gapn = 0
+  files = []
+  walk(path) do |file|
+    fileinfo = { 'path' => split_path(file) }
+    files << fileinfo
+    filesize = 0
+    File.open(file, 'rb') do |fd|
+      loop do
+        data = fd.read(torrent_piece_size - piece.size)
+        break if data.nil?
+        piece << data
+        if piece.size == torrent_piece_size
+          torrent_pieces << Digest::SHA1.digest(piece)
+          filesize += piece.size
+          piece = ''
+        end
       end
     end
+    if piece.size > 0
+      filesize += piece.size
+      fileinfo['length'] = filesize
+      gapsize = torrent_piece_size - piece.size
+      gapfile = "gap#{gapn}"
+      gapimage = "\000" * gapsize
+      fileinfo = { 'length' => gapsize, 'path' => [ gapfile ] }
+      files << fileinfo
+      gapn += 1
+      piece << gapimage
+      torrent_pieces << Digest::SHA1.digest(piece)
+      File.open(gapfile, 'wb'){|fd| fd.write(gapimage)}
+    else
+      fileinfo['length'] = filesize
+    end
   end
-  if piece.size > 0
-    torrent_pieces << Digest::SHA1.digest(piece)
-  end
+
   torrent = {
     'announce' => tracker,
     'created by' => 'statictorrent 0.0.0',
     'creation date' => Time.now.to_i,
     'info' => {
-      'length' => torrent_piece_size * (torrent_pieces.size - 1) + piece.size,
-      'name' => path,
+      'length' => torrent_piece_size * torrent_pieces.size,
+      'name' => name,
       'private' => priv ? 1 : 0,
       'pieces' => torrent_pieces.join,
       'piece length' => torrent_piece_size,
+      'files' => files,
     }
   }
   BEncode.dump(torrent)
@@ -171,7 +216,8 @@ end
 
 tracker = 'http://localhost:6969/announce'
 priv = true
-img = make_torrent('statictorrent.rb', tracker, priv)
+name = File.basename(FileUtils.pwd)
+img = make_torrent(name, '.', tracker, priv)
 File.open('a.torrent', 'wb') do |fd|
   fd.write(img)
 end
