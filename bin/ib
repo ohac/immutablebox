@@ -16,17 +16,19 @@ require 'immutablebox'
 tracker = 'http://localhost:6969/announce'
 priv = true
 name = File.basename(FileUtils.pwd)
+IB_DIR_GAP = "#{IB_DIR}/gap"
+IB_DIR_TORRENTS = "#{IB_DIR}/torrents/#{name}"
+IB_DIR_PIECES = "#{IB_DIR}/pieces"
 
 command = (ARGV.shift or 'help').to_sym
 case command
 when :commit, :ci
   img = make_torrent(name, '.', tracker, priv)
-  FileUtils.mkdir_p "#{IB_DIR}/torrents/#{name}"
-  torrentfile = "#{IB_DIR}/torrents/#{name}/#{Time.now.to_i}.torrent"
+  torrentfile = "#{IB_DIR_TORRENTS}/#{Time.now.to_i}.torrent"
   File.open(torrentfile, 'wb') do |fd|
     fd.write(img)
   end
-  storage = LocalStorage.new("#{IB_DIR}/pieces")
+  storage = LocalStorage.new(IB_DIR_PIECES)
   begin
     storage.open
     load_torrent(torrentfile) do |piece_hash, piece|
@@ -36,9 +38,14 @@ when :commit, :ci
     storage.close
   end
 when :init
-  FileUtils.mkdir_p "#{IB_DIR}/gap"
-  FileUtils.mkdir_p "#{IB_DIR}/torrents"
-  FileUtils.mkdir_p "#{IB_DIR}/pieces"
+  FileUtils.mkdir_p IB_DIR_GAP
+  FileUtils.mkdir_p IB_DIR_TORRENTS
+  FileUtils.mkdir_p IB_DIR_PIECES
+when :log
+  Dir.entries(IB_DIR_TORRENTS).each do |dir|
+    next unless /\.torrent\z/ === dir
+    puts Time.at(dir.split.first.to_i)
+  end
 when :status, :st
   p :status
 when :update, :up
