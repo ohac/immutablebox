@@ -63,16 +63,19 @@ class Torrent
 end
 
 def load_torrent(tname)
+  modifiedfiles = []
   torrent = Torrent.new(tname)
   info = torrent.info
   pieces = info.pieces.clone
   piece_length = info.piece_length
 
+  files = []
   piece = nil
   info.files.each do |file|
     file_size = file['length']
     fd = if file['path'][0] != IB_DIR
       filename = file['path'].join('/')
+      files << filename
       File.open(filename, 'rb')
     end
     begin
@@ -92,7 +95,10 @@ def load_torrent(tname)
         piece_hash = Digest::SHA1.digest(piece)
         if pieces.shift == piece_hash # good piece
           yield(piece_hash, piece)
+        else
+          modifiedfiles += files
         end
+        files = []
         piece = nil
       end
     ensure
@@ -104,8 +110,11 @@ def load_torrent(tname)
     piece_hash = Digest::SHA1.digest(piece)
     if pieces.shift == piece_hash # good piece
       yield(piece_hash, piece)
+    else
+      modifiedfiles += files
     end
   end
+  modifiedfiles
 end
 
 def walk(path, &block)

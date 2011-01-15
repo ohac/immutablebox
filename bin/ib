@@ -19,6 +19,7 @@ name = File.basename(FileUtils.pwd)
 IB_DIR_GAP = "#{IB_DIR}/gap"
 IB_DIR_TORRENTS = "#{IB_DIR}/torrents/#{name}"
 IB_DIR_PIECES = "#{IB_DIR}/pieces"
+storage = LocalStorage.new(IB_DIR_PIECES)
 
 command = (ARGV.shift or 'help').to_sym
 case command
@@ -28,7 +29,6 @@ when :commit, :ci
   File.open(torrentfile, 'wb') do |fd|
     fd.write(img)
   end
-  storage = LocalStorage.new(IB_DIR_PIECES)
   begin
     storage.open
     load_torrent(torrentfile) do |piece_hash, piece|
@@ -47,7 +47,18 @@ when :log
     puts Time.at(dir.split.first.to_i)
   end
 when :status, :st
-  p :status
+  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}.last
+  torrent = File.join(IB_DIR_TORRENTS, torrent)
+  begin
+    storage.open
+    changes = load_torrent(torrent) do |piece_hash, piece|
+    end
+    changes.each do |file|
+      puts file
+    end
+  ensure
+    storage.close
+  end
 when :update, :up
   p :update
 when :verify
