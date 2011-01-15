@@ -47,8 +47,8 @@ when :log
     puts Time.at(dir.split.first.to_i)
   end
 when :status, :st
-  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}.last
-  torrent = File.join(IB_DIR_TORRENTS, torrent)
+  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}
+  torrent = File.join(IB_DIR_TORRENTS, torrent.last)
   begin
     storage.open
     changes = load_torrent(torrent) do |piece_hash, piece|
@@ -56,6 +56,7 @@ when :status, :st
     changes.each do |file|
       puts file
     end
+    # TODO show new and removed files
   ensure
     storage.close
   end
