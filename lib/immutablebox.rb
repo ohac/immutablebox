@@ -153,6 +153,7 @@ def make_torrent(name, path, tracker, priv)
       gapn += 1
       piece << gapimage
       torrent_pieces << Digest::SHA1.digest(piece)
+      piece = ''
       File.open(gapfile, 'wb'){|fd| fd.write(gapimage)}
     else
       fileinfo['length'] = filesize
