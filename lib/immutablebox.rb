@@ -4,6 +4,7 @@ require 'base32'
 require 'cgi'
 require 'digest/sha1'
 require 'fileutils'
+require 'zlib'
 
 IB_DIR = '.ib'
 
@@ -199,9 +200,12 @@ class LocalStorage < Storage
   def open
     FileUtils.mkdir_p(@dir)
   end
+  def compress?(piece)
+    [' ', "\n", "\000"].map{|c| piece.count(c)}.max < 16
+  end
   def store(piece_hash, piece)
     File.open("#{@dir}/#{Torrent.str2hex(piece_hash)}", 'wb') do |fd|
-      fd.write(piece)
+      fd.write(compress?(piece) ? piece : Zlib::Deflate.deflate(piece))
     end
   end
 end
