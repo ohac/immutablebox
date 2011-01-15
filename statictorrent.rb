@@ -6,6 +6,8 @@ require 'cgi'
 require 'digest/sha1'
 require 'fileutils'
 
+IB_DIR = '.ib'
+
 class Torrent
   def self.str2hex(str)
     str.unpack('C*').map{|v|"%02x" % v}.join
@@ -77,6 +79,7 @@ def load_torrent(tname)
         else
           piece += fd.read(piece_length - piece.size)
         end
+        break unless piece
         break if piece.size < piece_length
         piece_hash = Digest::SHA1.digest(piece)
         if pieces.shift == piece_hash # good piece
@@ -122,9 +125,11 @@ def make_torrent(name, path, tracker, priv)
   torrent_pieces = []
   piece = ''
 
+  FileUtils.mkdir_p "#{IB_DIR}/gap"
   gapn = 0
   files = []
   walk(path) do |file|
+    next if /#{IB_DIR}\// === file
     fileinfo = { 'path' => split_path(file) }
     files << fileinfo
     filesize = 0
@@ -144,9 +149,9 @@ def make_torrent(name, path, tracker, priv)
       filesize += piece.size
       fileinfo['length'] = filesize
       gapsize = torrent_piece_size - piece.size
-      gapfile = "gap#{gapn}"
+      gapfile = "#{IB_DIR}/gap/#{gapn}"
       gapimage = "\000" * gapsize
-      fileinfo = { 'length' => gapsize, 'path' => [ gapfile ] }
+      fileinfo = { 'length' => gapsize, 'path' => gapfile.split('/') }
       files << fileinfo
       gapn += 1
       piece << gapimage
@@ -218,7 +223,8 @@ tracker = 'http://localhost:6969/announce'
 priv = true
 name = File.basename(FileUtils.pwd)
 img = make_torrent(name, '.', tracker, priv)
-File.open('a.torrent', 'wb') do |fd|
+torrentfile = "#{IB_DIR}/a.torrent"
+File.open(torrentfile, 'wb') do |fd|
   fd.write(img)
 end
 
@@ -228,7 +234,7 @@ distributed_storage << LocalStorage.new('ubuntuone')
 
 begin
   distributed_storage.open
-  load_torrent('a.torrent') do |piece_hash, piece|
+  load_torrent(torrentfile) do |piece_hash, piece|
     distributed_storage.store(piece_hash, piece)
   end
 ensure
