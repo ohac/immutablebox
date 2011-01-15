@@ -70,15 +70,23 @@ def load_torrent(tname)
   piece = nil
   info.files.each do |file|
     file_size = file['length']
-    filename = file['path'].join('/')
-    File.open(filename, 'rb') do |fd|
+    fd = if file['path'][0] != IB_DIR
+      filename = file['path'].join('/')
+      File.open(filename, 'rb')
+    end
+    begin
       loop do
-        if piece.nil?
-          piece = fd.read(piece_length)
+        if fd
+          if piece.nil?
+            piece = fd.read(piece_length)
+            break unless piece
+          else
+            piece += fd.read(piece_length - piece.size)
+          end
         else
-          piece += fd.read(piece_length - piece.size)
+          break unless piece
+          piece += "\000" * file_size
         end
-        break unless piece
         break if piece.size < piece_length
         piece_hash = Digest::SHA1.digest(piece)
         if pieces.shift == piece_hash # good piece
@@ -86,6 +94,8 @@ def load_torrent(tname)
         end
         piece = nil
       end
+    ensure
+      fd.close if fd
     end
   end
 
@@ -154,7 +164,6 @@ def make_torrent(name, path, tracker, priv)
       piece << gapimage
       torrent_pieces << Digest::SHA1.digest(piece)
       piece = ''
-      File.open(gapfile, 'wb'){|fd| fd.write(gapimage)}
     else
       fileinfo['length'] = filesize
     end
