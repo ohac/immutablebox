@@ -1,4 +1,3 @@
-#!/usr/bin/ruby
 require 'rubygems'
 require 'bencode'
 require 'base32'
@@ -124,8 +123,6 @@ def make_torrent(name, path, tracker, priv)
   torrent_piece_size = 2 ** 18
   torrent_pieces = []
   piece = ''
-
-  FileUtils.mkdir_p "#{IB_DIR}/gap"
   gapn = 0
   files = []
   walk(path) do |file|
@@ -217,26 +214,4 @@ class DistributedStorage < Storage
     dice = piece_hash.unpack('L').first % @storages.size
     @storages[dice].store(piece_hash, piece)
   end
-end
-
-tracker = 'http://localhost:6969/announce'
-priv = true
-name = File.basename(FileUtils.pwd)
-img = make_torrent(name, '.', tracker, priv)
-torrentfile = "#{IB_DIR}/a.torrent"
-File.open(torrentfile, 'wb') do |fd|
-  fd.write(img)
-end
-
-distributed_storage = DistributedStorage.new
-distributed_storage << LocalStorage.new('dropbox')
-distributed_storage << LocalStorage.new('ubuntuone')
-
-begin
-  distributed_storage.open
-  load_torrent(torrentfile) do |piece_hash, piece|
-    distributed_storage.store(piece_hash, piece)
-  end
-ensure
-  distributed_storage.close
 end

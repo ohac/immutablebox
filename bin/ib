@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+# vim: filetype=ruby
+
+self_file =
+  if File.symlink?(__FILE__)
+    require 'pathname'
+    Pathname.new(__FILE__).realpath
+  else
+    __FILE__
+  end
+$:.unshift(File.dirname(self_file) + "/../lib")
+
+require 'immutablebox'
+require 'choice'
+Choice.options do
+  option :commit do
+    short '-c'
+  end
+  option :init do
+    short '-i'
+  end
+  option :status do
+    short '-s'
+  end
+  option :update do
+    short '-u'
+  end
+  option :verify do
+    short '-v'
+  end
+end
+tracker = 'http://localhost:6969/announce'
+priv = true
+name = File.basename(FileUtils.pwd)
+c = Choice.choices
+if c.commit
+  img = make_torrent(name, '.', tracker, priv)
+  FileUtils.mkdir_p "#{IB_DIR}/torrents/#{name}"
+  torrentfile = "#{IB_DIR}/torrents/#{name}/#{Time.now.to_i}.torrent"
+  File.open(torrentfile, 'wb') do |fd|
+    fd.write(img)
+  end
+  storage = LocalStorage.new("#{IB_DIR}/pieces")
+  begin
+    storage.open
+    load_torrent(torrentfile) do |piece_hash, piece|
+      storage.store(piece_hash, piece)
+    end
+  ensure
+    storage.close
+  end
+elsif c.init
+  FileUtils.mkdir_p "#{IB_DIR}/gap"
+  FileUtils.mkdir_p "#{IB_DIR}/torrents"
+  FileUtils.mkdir_p "#{IB_DIR}/pieces"
+elsif c.status
+elsif c.verify
+end
