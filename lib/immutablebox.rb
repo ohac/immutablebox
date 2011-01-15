@@ -146,7 +146,7 @@ def make_torrent(name, path, tracker, priv)
   gapn = 0
   files = []
   walk(path) do |file|
-    next if /#{IB_DIR}\// === file
+    next if file.index("./#{IB_DIR}/") == 0
     fileinfo = { 'path' => split_path(file) }
     files << fileinfo
     filesize = 0
