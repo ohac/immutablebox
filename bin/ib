@@ -42,12 +42,15 @@ when :init
   FileUtils.mkdir_p IB_DIR_TORRENTS
   FileUtils.mkdir_p IB_DIR_PIECES
 when :log
+  exit unless File.directory? IB_DIR_TORRENTS
   Dir.entries(IB_DIR_TORRENTS).each do |dir|
     next unless /\.torrent\z/ === dir
     puts Time.at(dir.split.first.to_i)
   end
 when :status, :st
+  exit unless File.directory? IB_DIR_TORRENTS
   torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}
+  exit if torrent.size == 2 # '.', '..'
   torrent = File.join(IB_DIR_TORRENTS, torrent.last)
   begin
     storage.open
