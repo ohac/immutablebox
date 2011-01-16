@@ -29,4 +29,4 @@ Not implemented yet.
 * `ib replicate` replicate pieces with other repository
 * `ib status` show changed files in the working directory
 * `ib update` update working directory (or switch revisions)
-* `ib verify` verify the integrity of the repository
+* `ib verify` verify all pieces of the repository

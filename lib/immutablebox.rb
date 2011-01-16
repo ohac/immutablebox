@@ -139,8 +139,9 @@ def split_path(path)
   rv
 end
 
+TORRENT_PIECE_SIZE = 2 ** 18
+
 def make_torrent(name, path, tracker, priv)
-  torrent_piece_size = 2 ** 18
   torrent_pieces = []
   piece = ''
   gapn = 0
@@ -152,10 +153,10 @@ def make_torrent(name, path, tracker, priv)
     filesize = 0
     File.open(file, 'rb') do |fd|
       loop do
-        data = fd.read(torrent_piece_size - piece.size)
+        data = fd.read(TORRENT_PIECE_SIZE - piece.size)
         break if data.nil?
         piece << data
-        if piece.size == torrent_piece_size
+        if piece.size == TORRENT_PIECE_SIZE
           torrent_pieces << Digest::SHA1.digest(piece)
           filesize += piece.size
           piece = ''
@@ -165,7 +166,7 @@ def make_torrent(name, path, tracker, priv)
     if piece.size > 0
       filesize += piece.size
       fileinfo['length'] = filesize
-      gapsize = torrent_piece_size - piece.size
+      gapsize = TORRENT_PIECE_SIZE - piece.size
       gapfile = "#{IB_DIR}/gap/#{gapn}"
       gapimage = "\000" * gapsize
       fileinfo = { 'length' => gapsize, 'path' => gapfile.split('/') }
@@ -184,11 +185,11 @@ def make_torrent(name, path, tracker, priv)
     'created by' => 'statictorrent 0.0.0',
     'creation date' => Time.now.to_i,
     'info' => {
-      'length' => torrent_piece_size * torrent_pieces.size,
+      'length' => TORRENT_PIECE_SIZE * torrent_pieces.size,
       'name' => name,
       'private' => priv ? 1 : 0,
       'pieces' => torrent_pieces.join,
-      'piece length' => torrent_piece_size,
+      'piece length' => TORRENT_PIECE_SIZE,
       'files' => files,
     }
   }
@@ -210,7 +211,8 @@ class LocalStorage < Storage
     FileUtils.mkdir_p(@dir)
   end
   def compress?(piece)
-    [' ', "\n", "\000"].map{|c| piece.count(c)}.max < 16
+    limit = 3 * TORRENT_PIECE_SIZE / 256
+    [' ', "\n", "\000"].map{|c| piece.count(c)}.max < limit
   end
   def store(piece_hash, piece)
     File.open("#{@dir}/#{Torrent.str2hex(piece_hash)}", 'wb') do |fd|
