@@ -218,7 +218,9 @@ class LocalStorage < Storage
     [' ', "\n", "\000"].map{|c| piece.count(c)}.max < limit
   end
   def store(piece_hash, piece)
-    File.open("#{@dir}/#{Torrent.str2hex(piece_hash)}", 'wb') do |fd|
+    filename = "#{@dir}/#{Torrent.str2hex(piece_hash)}"
+    return if File.exist?(filename)
+    File.open(filename, 'wb') do |fd|
       fd.write(compress?(piece) ? piece : Zlib::Deflate.deflate(piece))
     end
   end
