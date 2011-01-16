@@ -141,7 +141,7 @@ end
 
 TORRENT_PIECE_SIZE = 2 ** 18
 
-def make_torrent(name, path, tracker, priv)
+def make_torrent(name, path, tracker, priv, gap = false)
   torrent_pieces = []
   piece = ''
   gapn = 0
@@ -175,6 +175,9 @@ def make_torrent(name, path, tracker, priv)
       piece << gapimage
       torrent_pieces << Digest::SHA1.digest(piece)
       piece = ''
+      if gap
+        File.open(gapfile, 'wb'){|fd| fd.write(gapimage)}
+      end
     else
       fileinfo['length'] = filesize
     end

@@ -24,7 +24,8 @@ storage = LocalStorage.new(IB_DIR_PIECES)
 command = (ARGV.shift or 'help').to_sym
 case command
 when :commit, :ci
-  img = make_torrent(name, '.', tracker, priv)
+  gap = !ARGV.shift.nil?
+  img = make_torrent(name, '.', tracker, priv, gap)
   torrentfile = "#{IB_DIR_TORRENTS}/#{Time.now.to_i}.torrent"
   File.open(torrentfile, 'wb') do |fd|
     fd.write(img)
