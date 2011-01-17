@@ -83,12 +83,18 @@ def load_torrent(tname)
         if fd
           if piece.nil?
             piece = fd.read(piece_length)
-            break unless piece
+            unless piece
+              files = []
+              break
+            end
           else
             piece += fd.read(piece_length - piece.size)
           end
         else
-          break unless piece
+          unless piece
+            files = []
+            break
+          end
           piece += "\000" * file_size
         end
         break if piece.size < piece_length
@@ -98,7 +104,6 @@ def load_torrent(tname)
         else
           modifiedfiles += files
         end
-        files = []
         piece = nil
       end
     ensure
@@ -114,7 +119,7 @@ def load_torrent(tname)
       modifiedfiles += files
     end
   end
-  modifiedfiles
+  modifiedfiles.uniq
 end
 
 def walk(path, &block)
