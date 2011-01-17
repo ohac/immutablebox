@@ -134,9 +134,7 @@ def save_torrent(tname, storage, files)
   info.files.each do |file|
     file_size = file['length']
     filename = file['path'].join('/')
-    if file['path'][0] == IB_DIR
-      pieces.shift
-    elsif files.include?(filename)
+    if file['path'][0] != IB_DIR and files.include?(filename)
       File.open(filename, 'wb') do |fd|
         n = file_size / piece_length
         mod = file_size % piece_length
