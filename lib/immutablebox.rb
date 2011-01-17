@@ -126,6 +126,37 @@ def load_torrent(tname)
   modifiedfiles.uniq
 end
 
+def save_torrent(tname, storage, files)
+  torrent = Torrent.new(tname)
+  info = torrent.info
+  pieces = info.pieces.clone
+  piece_length = info.piece_length
+  info.files.each do |file|
+    file_size = file['length']
+    filename = file['path'].join('/')
+    if file['path'][0] == IB_DIR
+      pieces.shift
+    elsif files.include?(filename)
+      File.open(filename, 'wb') do |fd|
+        n = file_size / piece_length
+        mod = file_size % piece_length
+        n.times do |i|
+          piece_hash = pieces.shift
+          piece = storage.get(piece_hash)
+          fd.write(piece)
+        end
+        if mod > 0
+          piece_hash = pieces.shift
+          piece = storage.get(piece_hash)
+          fd.write(piece[0, mod])
+        end
+      end
+    else
+      piece_hash = pieces.shift(file_size / piece_length)
+    end
+  end
+end
+
 def walk(path, &block)
   Dir.entries(path).select{|d| !(/\A\.+\z/.match d)}.each do |e|
     file = File.join(path, e)
@@ -213,6 +244,10 @@ class Storage
   end
   def close
   end
+  def put
+  end
+  def get
+  end
 end
 
 class LocalStorage < Storage
@@ -226,11 +261,24 @@ class LocalStorage < Storage
     limit = 3 * TORRENT_PIECE_SIZE / 256
     [' ', "\n", "\000"].map{|c| piece.count(c)}.max < limit
   end
-  def store(piece_hash, piece)
-    filename = "#{@dir}/#{Torrent.str2hex(piece_hash)}"
+  def getfilename(piece_hash)
+    "#{@dir}/#{Torrent.str2hex(piece_hash)}"
+  end
+  def put(piece_hash, piece)
+    filename = getfilename(piece_hash)
     return if File.exist?(filename)
     File.open(filename, 'wb') do |fd|
       fd.write(compress?(piece) ? piece : Zlib::Deflate.deflate(piece))
+    end
+  end
+  def get(piece_hash)
+    filename = getfilename(piece_hash)
+    return unless File.exist?(filename)
+    piece = File.open(filename, 'rb'){|fd| fd.read}
+    if piece.size == TORRENT_PIECE_SIZE
+      piece
+    else
+      Zlib::Inflate.inflate(piece)
     end
   end
 end
@@ -249,8 +297,8 @@ class DistributedStorage < Storage
   def close
     @storages.each(&:close)
   end
-  def store(piece_hash, piece)
+  def put(piece_hash, piece)
     dice = piece_hash.unpack('L').first % @storages.size
-    @storages[dice].store(piece_hash, piece)
+    @storages[dice].put(piece_hash, piece)
   end
 end

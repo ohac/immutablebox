@@ -33,7 +33,7 @@ when :commit, :ci
   begin
     storage.open
     load_torrent(torrentfile) do |piece_hash, piece|
-      storage.store(piece_hash, piece)
+      storage.put(piece_hash, piece)
     end
   ensure
     storage.close
@@ -60,12 +60,24 @@ when :status, :st
     changes.each do |file|
       puts file
     end
-    # TODO show new and removed files
+    # TODO show untracked files
   ensure
     storage.close
   end
 when :update, :up
-  p :update
+  # TODO be DRY (status)
+  exit unless File.directory? IB_DIR_TORRENTS
+  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}
+  exit if torrent.size == 2 # '.', '..'
+  torrent = File.join(IB_DIR_TORRENTS, torrent.last)
+  begin
+    storage.open
+    changes = load_torrent(torrent) do |piece_hash, piece|
+    end
+    save_torrent(torrent, storage, changes)
+  ensure
+    storage.close
+  end
 when :verify
   p :verify
 else
