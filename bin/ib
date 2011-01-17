@@ -21,6 +21,13 @@ IB_DIR_TORRENTS = "#{IB_DIR}/torrents/#{name}"
 IB_DIR_PIECES = "#{IB_DIR}/pieces"
 storage = LocalStorage.new(IB_DIR_PIECES)
 
+def get_last_torrent
+  return unless File.directory? IB_DIR_TORRENTS
+  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}
+  return if torrent.size == 2 # '.', '..'
+  File.join(IB_DIR_TORRENTS, torrent.last)
+end
+
 command = (ARGV.shift or 'help').to_sym
 case command
 when :commit, :ci
@@ -49,27 +56,33 @@ when :log
     puts Time.at(dir.split.first.to_i)
   end
 when :status, :st
-  exit unless File.directory? IB_DIR_TORRENTS
-  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}
-  exit if torrent.size == 2 # '.', '..'
-  torrent = File.join(IB_DIR_TORRENTS, torrent.last)
+  torrent = get_last_torrent
+  exit unless torrent
+  torrentobj = Torrent.new(torrent)
   begin
     storage.open
     changes = load_torrent(torrent) do |piece_hash, piece|
     end
     changes.each do |file|
-      puts file
+      puts "M #{file}"
     end
-    # TODO show untracked files
+    trackedfiles = torrentobj.info.files.map do |file|
+      if file['path'][0] != IB_DIR
+        file['path'].join('/')
+      end
+    end
+    allfiles = []
+    walk('.') do |file|
+      next if file.index("./#{IB_DIR}/") == 0
+      filename = file.split('/', 2).last
+      puts "? #{filename}" unless trackedfiles.include?(filename)
+    end
   ensure
     storage.close
   end
 when :update, :up
-  # TODO be DRY (status)
-  exit unless File.directory? IB_DIR_TORRENTS
-  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}
-  exit if torrent.size == 2 # '.', '..'
-  torrent = File.join(IB_DIR_TORRENTS, torrent.last)
+  torrent = get_last_torrent
+  exit unless torrent
   begin
     storage.open
     changes = load_torrent(torrent) do |piece_hash, piece|
