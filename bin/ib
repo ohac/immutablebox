@@ -31,8 +31,19 @@ end
 command = (ARGV.shift or 'help').to_sym
 case command
 when :commit, :ci
+  last_infohash = begin
+    torrent = get_last_torrent
+    if torrent
+      torrentobj = Torrent.new(File.read(torrent))
+      torrentobj.info.infohash
+    end
+  end
   gap = !ARGV.shift.nil?
   img = make_torrent(name, '.', tracker, priv, gap)
+  if last_infohash
+    new_infohash = Torrent.new(img).info.infohash
+    exit if last_infohash == new_infohash
+  end
   torrentfile = "#{IB_DIR_TORRENTS}/#{Time.now.to_i}.torrent"
   File.open(torrentfile, 'wb') do |fd|
     fd.write(img)
@@ -58,7 +69,7 @@ when :log
 when :status, :st
   torrent = get_last_torrent
   exit unless torrent
-  torrentobj = Torrent.new(torrent)
+  torrentobj = Torrent.new(File.read(torrent))
   begin
     storage.open
     changes = load_torrent(torrent) do |piece_hash, piece|

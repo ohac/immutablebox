@@ -33,17 +33,17 @@ class Torrent
     attr :name
     attr :pieces
 
-    def to_s
+    def magnet
       "magnet:?xt=urn:btih:%s" % Base32.encode(@info_hash)
     end
 
-    def inspect
+    def infohash
       Torrent.str2hex(@info_hash)
     end
   end
 
-  def initialize(filename)
-    torrent = BEncode.load(File.read(filename))
+  def initialize(img)
+    torrent = BEncode.load(img)
     @announce = torrent['announce']
     @creation_date = torrent['creation date']
     @info = Info.new(torrent['info'])
@@ -64,7 +64,7 @@ end
 
 def load_torrent(tname)
   modifiedfiles = []
-  torrent = Torrent.new(tname)
+  torrent = Torrent.new(File.read(tname))
   info = torrent.info
   pieces = info.pieces.clone
   piece_length = info.piece_length
@@ -127,7 +127,7 @@ def load_torrent(tname)
 end
 
 def save_torrent(tname, storage, files)
-  torrent = Torrent.new(tname)
+  torrent = Torrent.new(File.read(tname))
   info = torrent.info
   pieces = info.pieces.clone
   piece_length = info.piece_length
