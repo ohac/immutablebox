@@ -23,13 +23,13 @@ Usage
 * `ib init` create a new repository in the given directory
 * `ib log` show revision history of entire repository
 * `ib status` show changed files in the working directory
+* `ib update` update working directory (or switch revisions)
 
 Below are not implemented yet.
 
 * `ib pull` pull changes from the specified source
 * `ib push` push changes to the specified destination
 * `ib replicate` replicate pieces with other repository
-* `ib update` update working directory (or switch revisions)
 * `ib verify` verify all pieces of the repository
 
 Tutorial
@@ -45,3 +45,7 @@ Tutorial
 * `ib status`
 * `ib commit`
 * `ib log`
+* `rm YourFile.txt`
+* `ib status`
+* `ib update`
+* `vi YourFile.txt`
