@@ -76,7 +76,11 @@ def load_torrent(tname)
     fd = if file['path'][0] != IB_DIR
       filename = file['path'].join('/')
       files << filename
-      File.open(filename, 'rb')
+      if File.exist?(filename)
+        File.open(filename, 'rb')
+      else
+        StringIO.new(' ' * file_size)
+      end
     end
     begin
       loop do
