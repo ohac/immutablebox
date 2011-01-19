@@ -132,9 +132,10 @@ def save_torrent(tname, storage, files)
   pieces = info.pieces.clone
   piece_length = info.piece_length
   info.files.each do |file|
+    next if file['path'][0] == IB_DIR
     file_size = file['length']
     filename = file['path'].join('/')
-    if file['path'][0] != IB_DIR and files.include?(filename)
+    if files.include?(filename)
       File.open(filename, 'wb') do |fd|
         n = file_size / piece_length
         mod = file_size % piece_length
@@ -150,7 +151,7 @@ def save_torrent(tname, storage, files)
         end
       end
     else
-      piece_hash = pieces.shift(file_size / piece_length)
+      piece_hash = pieces.shift((file_size + piece_length - 1) / piece_length)
     end
   end
 end
