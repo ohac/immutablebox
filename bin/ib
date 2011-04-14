@@ -13,8 +13,8 @@ $:.unshift(File.dirname(self_file) + "/../lib")
 
 require 'immutablebox'
 
-tracker = 'http://localhost:6969/announce'
-priv = true
+tracker = 'udp://tracker.publicbt.com:80/announce'
+priv = false
 name = File.basename(FileUtils.pwd)
 IB_DIR_GAP = "#{IB_DIR}/gap"
 IB_DIR_TORRENTS = "#{IB_DIR}/torrents/#{name}"
