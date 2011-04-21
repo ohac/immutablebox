@@ -38,7 +38,7 @@ when :commit, :ci
       torrentobj.info.infohash
     end
   end
-  gap = !ARGV.shift.nil?
+  gap = ARGV.shift.nil?
   img = make_torrent(name, '.', tracker, priv, gap)
   if last_infohash
     new_infohash = Torrent.new(img).info.infohash
