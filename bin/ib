@@ -68,7 +68,14 @@ when :log
   end
 when :status, :st
   torrent = get_last_torrent
-  exit unless torrent
+  unless torrent
+    walk('.') do |file|
+      next if file.index("./#{IB_DIR}/") == 0
+      filename = file.split('/', 2).last
+      puts "? #{filename}"
+    end
+    exit
+  end
   torrentobj = Torrent.new(File.read(torrent))
   begin
     storage.open

@@ -8,13 +8,13 @@ echo 1 >1
 echo 2 >2
 echo 3 >3
 
-../bin/ib st >actual
+../bin/ib st >.ib/actual
 cat <<EOF >.ib/expected
 ? 1
 ? 2
 ? 3
 EOF
-diff -u .ib/expected actual
+diff -u .ib/expected .ib/actual
 
 ACTUAL=`../bin/ib log | wc -l`
 if [ $ACTUAL -ne 0 ]; then
@@ -41,11 +41,11 @@ if [ $ACTUAL -ne 0 ]; then
 fi
 
 rm 2
-../bin/ib st >actual
+../bin/ib st >.ib/actual
 cat <<EOF >.ib/expected
 M 2
 EOF
-diff -u .ib/expected actual
+diff -u .ib/expected .ib/actual
 
 ../bin/ib up
 ACTUAL=`../bin/ib st | wc -l`
