@@ -128,7 +128,8 @@ when :serve
     end
   else
     multicast_recv do |infohash|
-      p infohash
+      system "aria2c --bt-enable-lpd=true --seed-ratio 0.0 'magnet:?xt=urn:btih:#{infohash}'"
+      exit
     end
   end
 else
