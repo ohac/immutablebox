@@ -118,6 +118,7 @@ when :serve
   torrent = get_last_torrent
   if torrent
     torrentobj = Torrent.new(File.read(torrent))
+    puts torrentobj.info.magnet
     if fork
       loop do
         multicast_send(torrentobj.info.infohash)
