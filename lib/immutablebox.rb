@@ -5,6 +5,8 @@ require 'cgi'
 require 'digest/sha1'
 require 'fileutils'
 require 'zlib'
+require 'socket'
+require 'ipaddr'
 
 IB_DIR = '.ib'
 
@@ -299,5 +301,30 @@ class DistributedStorage < Storage
   def put(piece_hash, piece)
     dice = piece_hash.unpack('L').first % @storages.size
     @storages[dice].put(piece_hash, piece)
+  end
+end
+
+MULTICAST_ADDR = '239.192.183.175'
+PORT = 32174
+
+def multicast_send(infohash)
+  begin
+    socket = UDPSocket.open
+    socket.setsockopt(Socket::IPPROTO_IP, Socket::IP_TTL, [1].pack('i'))
+    socket.send(infohash, 0, MULTICAST_ADDR, PORT)
+  ensure
+    socket.close
+  end
+end
+
+def multicast_recv
+  ip = IPAddr.new(MULTICAST_ADDR).hton + IPAddr.new('0.0.0.0').hton
+  socket = UDPSocket.open
+  socket.setsockopt(Socket::IPPROTO_IP, Socket::IP_ADD_MEMBERSHIP, ip)
+  socket.bind(Socket::INADDR_ANY, PORT)
+  loop do
+    msg, info = socket.recvfrom(1024)
+puts "MSG: '#{msg}' from #{info[2]} (#{info[3]})/#{info[1]} len #{msg.size}"
+    yield(msg)
   end
 end
