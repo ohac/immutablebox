@@ -19,6 +19,7 @@ name = File.basename(FileUtils.pwd)
 IB_DIR_GAP = "#{IB_DIR}/gap"
 IB_DIR_TORRENTS = "#{IB_DIR}/torrents/#{name}"
 IB_DIR_PIECES = "#{IB_DIR}/pieces"
+IB_DIR_CURRENT = "#{IB_DIR}/current"
 storage = LocalStorage.new(IB_DIR_PIECES)
 
 def get_last_torrent
@@ -48,6 +49,7 @@ when :commit, :ci
   File.open(torrentfile, 'wb') do |fd|
     fd.write(img)
   end
+  FileUtils.cp(torrentfile, "#{IB_DIR_CURRENT}/#{name}.torrent")
   begin
     storage.open
     load_torrent(torrentfile) do |piece_hash, piece|
@@ -60,6 +62,7 @@ when :init
   FileUtils.mkdir_p IB_DIR_GAP
   FileUtils.mkdir_p IB_DIR_TORRENTS
   FileUtils.mkdir_p IB_DIR_PIECES
+  FileUtils.mkdir_p IB_DIR_CURRENT
 when :log
   exit unless File.directory? IB_DIR_TORRENTS
   Dir.entries(IB_DIR_TORRENTS).each do |dir|
