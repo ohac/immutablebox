@@ -114,6 +114,8 @@ when :update, :up
   end
 when :verify
   p :verify
+when :serve
+  system "aria2c --dir=.. --seed-ratio 0.0 -V #{IB_DIR_CURRENT}/#{name}.torrent"
 else
   p :help
 end
