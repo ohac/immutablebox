@@ -185,7 +185,7 @@ TORRENT_PIECE_SIZE = 2 ** 18
 def make_torrent(name, path, tracker, priv, gap = false)
   torrent_pieces = []
   piece = ''
-  gapn = 0
+  gapns = {}
   files = []
   walk(path) do |file|
     next if file.index("./#{IB_DIR}/") == 0
@@ -208,11 +208,12 @@ def make_torrent(name, path, tracker, priv, gap = false)
       filesize += piece.size
       fileinfo['length'] = filesize
       gapsize = TORRENT_PIECE_SIZE - piece.size
-      gapfile = "#{IB_DIR}/gap/#{gapn}"
+      gapn = gapns[gapsize] || 0
+      gapfile = "#{IB_DIR}/gap/#{gapsize}.#{gapn}"
       gapimage = "\000" * gapsize
       fileinfo = { 'length' => gapsize, 'path' => gapfile.split('/') }
       files << fileinfo
-      gapn += 1
+      gapns[gapsize] = gapn + 1
       piece << gapimage
       torrent_pieces << Digest::SHA1.digest(piece)
       piece = ''
