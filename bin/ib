@@ -129,7 +129,7 @@ when :serve
       if cli == 'deluge'
         puts "add this: #{IB_DIR_CURRENT}/#{name}.torrent"
       else
-        system "aria2c --dir=.. --bt-enable-lpd=true --seed-ratio 0.0 -V #{IB_DIR_CURRENT}/#{name}.torrent"
+        system "aria2c --dir=.. --bt-enable-lpd=true --seed-ratio 0.0 -V #{torrent}"
       end
     end
   else
