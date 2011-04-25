@@ -125,12 +125,25 @@ when :serve
         sleep 5
       end
     else
-      system "aria2c --dir=.. --bt-enable-lpd=true --seed-ratio 0.0 -V #{IB_DIR_CURRENT}/#{name}.torrent"
+      cli = ARGV.shift
+      if cli == 'deluge'
+        puts "add this: #{IB_DIR_CURRENT}/#{name}.torrent"
+      else
+        system "aria2c --dir=.. --bt-enable-lpd=true --seed-ratio 0.0 -V #{IB_DIR_CURRENT}/#{name}.torrent"
+      end
     end
   else
+    received = {}
     multicast_recv do |infohash|
-      system "aria2c -V --allow-overwrite=true --bt-enable-lpd=true --seed-ratio 0.0 'magnet:?xt=urn:btih:#{infohash}'"
-      exit
+      next if received[infohash]
+      received[infohash] = true
+      cli = ARGV.shift
+      if cli == 'deluge'
+        puts "add this: magnet:?xt=urn:btih:#{infohash}"
+      else
+        system "aria2c -V --allow-overwrite=true --bt-enable-lpd=true --seed-ratio 0.0 'magnet:?xt=urn:btih:#{infohash}'"
+        exit
+      end
     end
   end
 else
