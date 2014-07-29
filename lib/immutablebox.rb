@@ -1,12 +1,14 @@
 require 'rubygems'
 require 'bencode'
 require 'base32'
+require 'base64'
 require 'cgi'
 require 'digest/sha1'
 require 'fileutils'
 require 'zlib'
 require 'socket'
 require 'ipaddr'
+require 'openssl'
 
 IB_DIR = '.ib'
 
@@ -255,6 +257,13 @@ end
 class LocalStorage < Storage
   def initialize(dir)
     @dir = dir
+    cipher = getcipher
+    @iv = Digest::SHA1.hexdigest('iv') # TODO
+    @key = Digest::SHA1.hexdigest('key') # TODO
+    #@iv = cipher.random_iv # TODO
+    #@key = cipher.random_key # TODO
+    #puts Base64.encode64(@iv) # TODO save to config file
+    #puts Base64.encode64(@key) # TODO save to config file
   end
   def open
     FileUtils.mkdir_p(@dir)
@@ -266,17 +275,31 @@ class LocalStorage < Storage
   def getfilename(piece_hash)
     "#{@dir}/#{Torrent.str2hex(piece_hash)}"
   end
+  def getcipher
+    OpenSSL::Cipher::AES.new(256, :CBC)
+  end
   def put(piece_hash, piece)
+    cipher = getcipher
+    cipher.encrypt
+    cipher.key = @key
+    cipher.iv = @iv
     filename = getfilename(piece_hash)
     return if File.exist?(filename)
     File.open(filename, 'wb') do |fd|
-      fd.write(compress?(piece) ? piece : Zlib::Deflate.deflate(piece))
+      data = compress?(piece) ? piece : Zlib::Deflate.deflate(piece)
+      encrypted = cipher.update(data) + cipher.final
+      fd.write(encrypted)
     end
   end
   def get(piece_hash)
+    cipher = getcipher
+    cipher.decrypt
+    cipher.key = @key
+    cipher.iv = @iv
     filename = getfilename(piece_hash)
     return unless File.exist?(filename)
-    piece = File.open(filename, 'rb'){|fd| fd.read}
+    encrypted = File.open(filename, 'rb'){|fd| fd.read}
+    piece = cipher.update(encrypted) + cipher.final
     if piece.size == TORRENT_PIECE_SIZE # TODO enough?
       piece
     else
