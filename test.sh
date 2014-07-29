@@ -15,6 +15,10 @@ cat <<EOF >.ib/expected
 ? 3
 EOF
 diff -u .ib/expected .ib/actual
+if [ $? -ne 0 ]; then
+  echo failed
+  exit 1
+fi
 
 ACTUAL=`../bin/ib log | wc -l`
 if [ $ACTUAL -ne 0 ]; then

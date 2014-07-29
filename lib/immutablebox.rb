@@ -159,7 +159,7 @@ def save_torrent(tname, storage, files)
 end
 
 def walk(path, &block)
-  Dir.entries(path).select{|d| !(/\A\.+\z/.match d)}.each do |e|
+  Dir.entries(path).select{|d| !(/\A\.+\z/.match d)}.sort.each do |e|
     file = File.join(path, e)
     if File.directory?(file)
       walk(file, &block)
