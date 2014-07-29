@@ -260,7 +260,7 @@ class LocalStorage < Storage
     FileUtils.mkdir_p(@dir)
   end
   def compress?(piece)
-    limit = 3 * TORRENT_PIECE_SIZE / 256
+    limit = 3 * TORRENT_PIECE_SIZE / 256 # TODO enough? (< 1.17%)
     [' ', "\n", "\000"].map{|c| piece.count(c)}.max < limit
   end
   def getfilename(piece_hash)
@@ -277,7 +277,7 @@ class LocalStorage < Storage
     filename = getfilename(piece_hash)
     return unless File.exist?(filename)
     piece = File.open(filename, 'rb'){|fd| fd.read}
-    if piece.size == TORRENT_PIECE_SIZE
+    if piece.size == TORRENT_PIECE_SIZE # TODO enough?
       piece
     else
       Zlib::Inflate.inflate(piece)
