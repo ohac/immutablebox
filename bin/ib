@@ -47,9 +47,10 @@ storage.key = SETTING['crypt']['key']
 
 def get_last_torrent
   return unless File.directory? IB_DIR_TORRENTS
-  torrent = Dir.entries(IB_DIR_TORRENTS).sort_by{|dir| dir.split.first.to_i}
-  return if torrent.size == 2 # '.', '..'
-  File.join(IB_DIR_TORRENTS, torrent.last)
+  torrents = Dir.entries(IB_DIR_TORRENTS) - ['.', '..']
+  return if torrents.empty?
+  torrents = torrents.sort_by{|dir| dir.split.first.to_i}
+  File.join(IB_DIR_TORRENTS, torrents.last)
 end
 
 command = (ARGV.shift or 'help').to_sym
