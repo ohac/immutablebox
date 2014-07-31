@@ -255,15 +255,23 @@ class Storage
 end
 
 class LocalStorage < Storage
+  attr_reader :iv, :key
+
   def initialize(dir)
     @dir = dir
     cipher = getcipher
-    @iv = Digest::SHA1.hexdigest('iv') # TODO
-    @key = Digest::SHA1.hexdigest('key') # TODO
-    #@iv = cipher.random_iv # TODO
-    #@key = cipher.random_key # TODO
-    #puts Base64.encode64(@iv) # TODO save to config file
-    #puts Base64.encode64(@key) # TODO save to config file
+    @iv_raw = cipher.random_iv
+    @key_raw = cipher.random_key
+    @iv = Base64.encode64(@iv_raw).chomp
+    @key = Base64.encode64(@key_raw).chomp
+  end
+  def iv=(iv)
+    @iv = iv
+    @iv_raw = Base64.decode64(iv)
+  end
+  def key=(key)
+    @key = key
+    @key_raw = Base64.decode64(key)
   end
   def open
     FileUtils.mkdir_p(@dir)
@@ -281,8 +289,8 @@ class LocalStorage < Storage
   def put(piece_hash, piece)
     cipher = getcipher
     cipher.encrypt
-    cipher.key = @key
-    cipher.iv = @iv
+    cipher.key = @key_raw
+    cipher.iv = @iv_raw
     filename = getfilename(piece_hash)
     return if File.exist?(filename)
     File.open(filename, 'wb') do |fd|
@@ -294,8 +302,8 @@ class LocalStorage < Storage
   def get(piece_hash)
     cipher = getcipher
     cipher.decrypt
-    cipher.key = @key
-    cipher.iv = @iv
+    cipher.key = @key_raw
+    cipher.iv = @iv_raw
     filename = getfilename(piece_hash)
     return unless File.exist?(filename)
     encrypted = File.open(filename, 'rb'){|fd| fd.read}

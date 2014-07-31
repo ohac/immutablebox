@@ -12,6 +12,8 @@ self_file =
 $:.unshift(File.dirname(self_file) + "/../lib")
 
 require 'immutablebox'
+require 'fileutils'
+require 'yaml'
 
 tracker = 'udp://tracker.publicbt.com:80/announce'
 priv = false
@@ -21,6 +23,27 @@ IB_DIR_TORRENTS = "#{IB_DIR}/torrents/#{name}"
 IB_DIR_PIECES = "#{IB_DIR}/pieces"
 IB_DIR_CURRENT = "#{IB_DIR}/current"
 storage = LocalStorage.new(IB_DIR_PIECES)
+
+HOME_DIR = ENV['HOME']
+SETTING_DIR = File.join(HOME_DIR, '.ib')
+SETTING_FILE = File.join(SETTING_DIR, 'settings.yaml')
+unless File.exists?(SETTING_DIR)
+  FileUtils.mkdir SETTING_DIR
+end
+unless File.exists?(SETTING_FILE)
+  open(SETTING_FILE, 'w') do |fd|
+    setting = {
+      'crypt' => {
+        'iv' => storage.iv,
+        'key' => storage.key,
+      },
+    }
+    fd.puts(YAML.dump(setting))
+  end
+end
+SETTING = YAML.load(File.read(SETTING_FILE))
+storage.iv = SETTING['crypt']['iv']
+storage.key = SETTING['crypt']['key']
 
 def get_last_torrent
   return unless File.directory? IB_DIR_TORRENTS
